@@ -2,6 +2,7 @@ class mysql::client {
 
   case $operatingsystem {
     debian: { include mysql::client::debian }
+    ubuntu: { include mysql::client::debian }
     default: { include mysql::client::base }
   }
 
