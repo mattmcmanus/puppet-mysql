@@ -16,36 +16,22 @@ class mysql::server::cron::backup {
         }
       }
     }
-
+    
+    file {
+      "db-backup.sh":
+        path => "/root/scripts/db-backup.sh",
+        content  => template("mysql/db-backup.sh.erb"),
+        require => File["root/scripts"],
+        owner => root, group => 0, mode => 0500,
+        ensure => present;
+    }
+    
     cron { 'mysql_backup_cron':
-        command => "/usr/bin/mysqldump --default-character-set=utf8 --all-databases --create-options --flush-logs --lock-tables --single-transaction | gzip > ${real_mysql_backup_dir}/mysqldump.sql.$(date +%Y-%m-%d).gz",
-        user => 'root',
-        minute => 0,
-        hour => 1,
-        require => [ Exec['mysql_set_rootpw'], File['mysql_root_cnf'] ],
-   }
-   
-  if $mysql_cleanup_after {
-    cron { 'mysql_backup_cleanup':
-      command => "find ${real_mysql_backup_dir} -mtime +${mysql_cleanup_after} -exec rm {} \;",
+      command => "/bin/sh /root/scripts/db-backup.sh",
       user => 'root',
       minute => 0,
-      hour => 2,
-      require => [ Cron['mysql_backup_cron'] ],
-
+      hour => 1,
+      require => [ File['db-backup.sh'] ],
     }
-  } 
-   
-  if $mysql_backup_s3 {
-    include s3cmd
-    
-    cron { 'mysql_backup_s3':
-      command => "s3cmd sync --delete-removed --skip-existing ${real_mysql_backup_dir}/ s3://${s3_bucket}/databases/",
-      user => 'root',
-      minute => 5,
-      hour => 2,
-      require => [ Cron['mysql_backup_cron'] ],
-    }
-  }
    
 }

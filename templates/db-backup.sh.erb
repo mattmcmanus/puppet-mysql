@@ -1,0 +1,27 @@
+#!/bin/bash
+
+echo "================================================"
+echo "         Backing up mysql databases             "
+echo "================================================"
+
+/usr/bin/mysqldump --default-character-set=utf8 --all-databases --create-options --flush-logs --lock-tables --single-transaction | gzip > <%= real_mysql_backup_dir %>/mysqldump.sql.$(date +%Y-%m-%d).gz
+
+if [ -f <%= real_mysql_backup_dir %>/mysqldump.sql.$(date +%Y-%m-%d).gz ]; then
+  echo "- mysqldump.sql.$(date +%Y-%m-%d).gz successfully created"
+else 
+  echo "FAILED: mysql dump failed to create archive"
+  exit 1
+fi 
+
+<% if mysql_cleanup_after %>
+echo "- Cleaning up old backups"
+find <%= real_mysql_backup_dir%> -mtime +<%= mysql_cleanup_after %> -exec rm {} \;
+<% end -%>
+
+<% if mysql_backup_s3 %>
+echo "- Syncing backsup to s3"
+s3cmd sync --delete-removed --skip-existing <%= real_mysql_backup_dir %>/ s3://<%=s3_bucket%>/databases/
+<% end -%>
+
+echo "================ SUCCESS ======================="
+exit 0
