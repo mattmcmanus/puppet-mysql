@@ -39,7 +39,7 @@ class mysql::server::cron::backup {
     cron { 'mysql_backup_cron':
       command => "/bin/sh /root/scripts/db-backup.sh",
       user => 'root',
-      minute => 0,
+      minute => 30,
       hour => 1,
       require => [ File['db-backup.sh'] ],
     }
